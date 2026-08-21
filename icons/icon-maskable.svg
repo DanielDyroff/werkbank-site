@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Maskable: voller Hintergrund, Motiv im sicheren Bereich (zentrale ~80%) -->
+  <rect width="512" height="512" fill="#5b2d8e"/>
+  <rect x="170" y="150" width="172" height="200" rx="10" fill="none" stroke="#ffffff" stroke-width="16"/>
+  <line x1="256" y1="150" x2="256" y2="350" stroke="#ffffff" stroke-width="11"/>
+  <line x1="170" y1="250" x2="342" y2="250" stroke="#ffffff" stroke-width="11"/>
+  <circle cx="312" cy="195" r="22" fill="#f59e0b" stroke="#ffffff" stroke-width="6"/>
+</svg>

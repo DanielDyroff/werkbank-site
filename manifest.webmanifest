@@ -1,0 +1,16 @@
+{
+  "name": "Werkbank",
+  "short_name": "Werkbank",
+  "description": "Fenster und Türen aufmessen per Foto mit Referenzobjekt – Profi- und Kunden-Modus.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2eef8",
+  "theme_color": "#5b2d8e",
+  "lang": "de",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
