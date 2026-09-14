@@ -11,6 +11,16 @@
   function mm(v) { return (v == null || isNaN(v)) ? '' : Math.round(v) + ''; }
   function esc(s) { return String(s == null ? '' : s); }
 
+  /** Deckt sich mit FENSTERART_OPTIONS in app.js (Anzeige-Label je Werkstoff-Kürzel). */
+  var FENSTERART_LABEL = {
+    kunststoff: 'Kunststoff', holz: 'Holz', 'holz-alu': 'Holz-Aluminium',
+    aluminium: 'Aluminium', stahl: 'Stahl', sonstige: 'Sonstige'
+  };
+  function fensterartLabel(m) {
+    var key = m.windowFields && m.windowFields.fensterart;
+    return key ? (FENSTERART_LABEL[key] || key) : '';
+  }
+
   /** Effektives Maß: manuelle Korrektur hat Vorrang vor berechnetem Wert. */
   function effWidth(m) { return (m.manualOverride && m.manualOverride.widthMm) || m.result.widthMm; }
   function effHeight(m) { return (m.manualOverride && m.manualOverride.heightMm) || m.result.heightMm; }
@@ -27,7 +37,7 @@
   }
 
   Exporter.toCsv = function (rows) {
-    var header = ['Projekt', 'Kunde', 'Typ', 'Bezeichnung', 'Raum', 'Position',
+    var header = ['Projekt', 'Kunde', 'Typ', 'Fensterart', 'Bezeichnung', 'Raum', 'Position',
       'Breite_mm', 'Hoehe_mm', 'Diagonale1_mm', 'Diagonale2_mm',
       'Korrigiert', 'Quelle', 'Erstellt', 'Notiz'];
     var lines = [header.map(csvCell).join(';')];
@@ -37,6 +47,7 @@
         p ? p.name : 'Eingang (Kunde)',
         p && p.customer ? p.customer.name : '',
         m.objectType === 'door' ? 'Tür' : 'Fenster',
+        fensterartLabel(m),
         m.label || '',
         m.room || '',
         m.position || '',
@@ -75,6 +86,8 @@
         ? '<img class="foto" src="' + m.imageDataUrl + '" alt="Aufmaßfoto">'
         : '<div class="foto kein">kein Foto</div>';
       var typeLabel = m.objectType === 'door' ? 'Tür' : 'Fenster';
+      var fensterartRow = (m.objectType === 'window' && fensterartLabel(m))
+        ? '<tr><th>Fensterart</th><td>' + esc(fensterartLabel(m)) + '</td></tr>' : '';
       var df = m.doorFields;
       var doorRows = (m.objectType === 'door' && df) ?
         '<tr><th>Anschlag</th><td>' + esc(df.hinge || '–') + '</td></tr>' +
@@ -95,6 +108,7 @@
               '<tr><th>Diagonale 2</th><td>' + mm(m.result.diag2Mm) + ' mm</td></tr>' +
               '<tr><th>Referenz</th><td>' + esc(m.referenceLabel || 'DIN A4 (Blatt, 4 Ecken)') + '</td></tr>' +
               '<tr><th>Qualität</th><td>' + esc(check.score) + ' / 100' + (m.manualOverride ? ' · manuell korrigiert' : '') + '</td></tr>' +
+              fensterartRow +
               doorRows +
             '</table>' +
           '</div>' +

@@ -135,6 +135,7 @@
     App.state.wiz = {
       target: target,                 // {mode:'kunde'|'pro', projectId}
       objectType: App.DEFAULT_OBJECT_TYPE,
+      fensterart: null,               // nur bei Fenstern: 'kunststoff'|'holz'|... (Pflichtfeld, Mensch)
       img: null,
       referenceKey: Geo.DEFAULT_REFERENCE,
       refPts: [], mmPerPx: null,
@@ -184,6 +185,22 @@
     }
   };
 
+  /**
+   * Fensterart (Werkstoff): bewusst kein KI-Merkmal, immer manuelle Auswahl
+   * (siehe Konzept_Fensterart-und-Fenstertyp-Erkennung.md, Abschnitt 5) —
+   * Werkstoffe sind auf Fotos oft nicht zuverlässig unterscheidbar und die
+   * Fensterart ist Grundlage der späteren Kalkulation/Preisliste.
+   */
+  var FENSTERART_OPTIONS = {
+    kunststoff: { label: 'Kunststoff', desc: 'Preisliste vorhanden.' },
+    holz: { label: 'Holz', desc: 'Preisliste noch nicht digitalisiert.' },
+    'holz-alu': { label: 'Holz-Aluminium', desc: 'Preisliste noch nicht digitalisiert.' },
+    aluminium: { label: 'Aluminium', desc: 'Preisliste noch nicht digitalisiert.' },
+    stahl: { label: 'Stahl', desc: 'Preisliste noch nicht digitalisiert.' },
+    sonstige: { label: 'Sonstige', desc: '' }
+  };
+  App.DEFAULT_FENSTERART = 'kunststoff';
+
   /** Formularblock für türspezifische Zusatzfelder (Anschlag, Schwelle, Zargentiefe, DIN-Richtung). */
   function doorFieldsHtml(prefix) {
     return '' +
@@ -222,6 +239,13 @@
    */
   function windowFieldsHtml(prefix, wf) {
     wf = wf || Visualize.DEFAULT_WINDOW_FIELDS;
+    // Fensterart: bereits auf dem eigenen Auswahlscreen gewählt (App.state.wiz.fensterart);
+    // beim nachträglichen Bearbeiten (wf.fensterart) hat der gespeicherte Wert Vorrang.
+    var currentFensterart = wf.fensterart || (App.state.wiz && App.state.wiz.fensterart) || App.DEFAULT_FENSTERART;
+    var fensterartOpts = Object.keys(FENSTERART_OPTIONS).map(function (k) {
+      var sel = k === currentFensterart ? ' selected' : '';
+      return '<option value="' + k + '"' + sel + '>' + esc(FENSTERART_OPTIONS[k].label) + '</option>';
+    }).join('');
     var openingOpts = Object.keys(Visualize.OPENING_TYPES).map(function (k) {
       var sel = k === wf.openingType ? ' selected' : '';
       return '<option value="' + k + '"' + sel + '>' + esc(Visualize.OPENING_TYPES[k].label) + '</option>';
@@ -234,6 +258,7 @@
     var mullH = (wf.mullions && wf.mullions.h) || 0, mullV = (wf.mullions && wf.mullions.v) || 0;
     return '' +
       '<div class="meta-form window-fields">' +
+        '<label class="field"><span>Fensterart</span><select id="' + prefix + 'WMaterial">' + fensterartOpts + '</select></label>' +
         '<div class="two">' +
           '<label class="field"><span>Öffnungsart</span><select id="' + prefix + 'WOpening">' + openingOpts + '</select></label>' +
           '<label class="field"><span>Flügelzahl</span><select id="' + prefix + 'WSash">' + sashOpts + '</select></label>' +
@@ -258,6 +283,7 @@
     var mullH = parseInt(document.getElementById(prefix + 'WMullH').value, 10);
     var mullV = parseInt(document.getElementById(prefix + 'WMullV').value, 10);
     return {
+      fensterart: document.getElementById(prefix + 'WMaterial').value,
       sashCount: parseInt(document.getElementById(prefix + 'WSash').value, 10) || 1,
       openingType: document.getElementById(prefix + 'WOpening').value,
       hingeSide: document.getElementById(prefix + 'WHinge').value,
@@ -360,6 +386,34 @@
       view.querySelectorAll('.mode').forEach(function (b) {
         b.onclick = function () {
           App.state.wiz.objectType = b.dataset.type;
+          if (b.dataset.type === 'window') { App.go('fensterart'); return; }
+          App.go(App.state.wiz.target.mode === 'kunde' ? 'kundeIntro' : 'capture');
+        };
+      });
+    }
+  };
+
+  /* -------- Fensterart wählen (nur bei Fenstern, Pflichtfeld, immer Mensch) -------- */
+  Screens.fensterart = {
+    title: function () { return 'Welche Fensterart?'; },
+    html: function () {
+      return '' +
+        '<p class="instruct">Der Werkstoff bestimmt die spätere Preisliste – bitte auswählen. ' +
+          'Das kann die App nicht zuverlässig aus einem Foto erkennen.</p>' +
+        '<div class="cards">' +
+          Object.keys(FENSTERART_OPTIONS).map(function (key) {
+            var t = FENSTERART_OPTIONS[key];
+            return '<button class="card mode" data-fensterart="' + key + '">' +
+              '<span class="card-t">' + esc(t.label) + '</span>' +
+              (t.desc ? '<span class="card-d">' + esc(t.desc) + '</span>' : '') +
+            '</button>';
+          }).join('') +
+        '</div>';
+    },
+    mount: function () {
+      view.querySelectorAll('.mode').forEach(function (b) {
+        b.onclick = function () {
+          App.state.wiz.fensterart = b.dataset.fensterart;
           App.go(App.state.wiz.target.mode === 'kunde' ? 'kundeIntro' : 'capture');
         };
       });
@@ -852,9 +906,11 @@
             var check = Geo.checkPlausibility(m.result, m.objectType);
             var badge = m.source === 'kunde' ? '<span class="src kunde">Kunde</span>' : '';
             var typeBadge = '<span class="src type">' + esc(OBJECT_TYPE_TEXT[m.objectType || 'window'].label) + '</span>';
+            var materialKey = m.windowFields && m.windowFields.fensterart;
+            var materialBadge = materialKey ? '<span class="src type">' + esc(FENSTERART_OPTIONS[materialKey] ? FENSTERART_OPTIONS[materialKey].label : materialKey) + '</span>' : '';
             return '<div class="row meas" data-id="' + m.id + '">' +
               (m.imageDataUrl ? '<img class="thumb" src="' + m.imageDataUrl + '">' : '<div class="thumb"></div>') +
-              '<div class="row-main"><b>' + esc(m.label) + ' ' + typeBadge + ' ' + badge + '</b>' +
+              '<div class="row-main"><b>' + esc(m.label) + ' ' + typeBadge + ' ' + materialBadge + ' ' + badge + '</b>' +
                 '<span>' + fmtMm(e.w) + ' × ' + fmtMm(e.h) + (m.manualOverride ? ' · korrigiert' : '') +
                 ' · Q' + check.score + '</span></div>' +
               '<span class="chev">›</span>' +

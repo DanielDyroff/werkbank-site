@@ -15,7 +15,7 @@
 
   var DB_KEY = 'aufmass_db_v1';
   var SESSION_KEY = 'aufmass_admin_session';
-  var DEFAULT_PIN = '1234';
+  var DEFAULT_PIN = '790869';
 
   /** Schwacher Hash – NUR Demo. In Produktion: serverseitige Auth + bcrypt o. Ä. */
   function weakHash(str) {
